@@ -1,0 +1,33 @@
+services:
+  prax:
+    build: .
+    image: prax-portal:latest
+    container_name: prax-portal
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOST: "0.0.0.0"
+      # 数据库与上传文件都落在下面这个卷里，重建容器不丢数据
+      PRAX_DATA_DIR: /app/data
+      PRAX_DB_FILE: /app/data/prax.sqlite
+      PRAX_UPLOAD_DIR: /app/data/uploads
+      # 首次启动时用来自动创建管理员（仅在数据库为空时生效）
+      PRAX_ADMIN_PASSWORD: "admin123"
+    volumes:
+      - prax-data:/app/data
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  prax-data:

@@ -1,0 +1,9 @@
+node_modules
+data
+shots
+.git
+.gitignore
+*.log
+tools/__pycache__
+.DS_Store
+Thumbs.db

@@ -1,0 +1,314 @@
+/* ==========================================================================
+   自建页面的前台排版（米白底 / 深橙底通用）
+   目标：让 Markdown 与 HTML 两种来源的正文都有一致的阅读体验
+   ========================================================================== */
+
+.custom-page {
+  padding: calc(var(--header-h) + 54px) 0 90px;
+  min-height: 70vh;
+}
+
+.custom-page--plain {
+  padding: 44px 0 70px;
+}
+
+.custom-cover {
+  max-width: var(--wrap);
+  margin: 0 auto 38px;
+  padding: 0 24px;
+}
+
+.custom-cover img {
+  width: 100%;
+  max-height: 420px;
+  object-fit: cover;
+  border-radius: var(--r-lg);
+}
+
+.custom-article {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.custom-head {
+  margin-bottom: 34px;
+  padding-bottom: 26px;
+  border-bottom: 1px solid var(--border);
+}
+
+.custom-title {
+  font-size: clamp(30px, 4.4vw, 46px);
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+  margin-bottom: 14px;
+}
+
+.custom-summary {
+  font-size: 17px;
+  line-height: 1.8;
+  color: var(--text-soft);
+  margin: 0 0 16px;
+}
+
+.custom-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--text-mute);
+}
+
+/* ---------------------------------------------------------------- 正文排版 */
+.custom-body {
+  font-size: 16.5px;
+  line-height: 1.85;
+  color: var(--text);
+  word-wrap: break-word;
+}
+
+.custom-body > *:first-child {
+  margin-top: 0;
+}
+
+.custom-body h1,
+.custom-body h2,
+.custom-body h3,
+.custom-body h4,
+.custom-body h5,
+.custom-body h6 {
+  margin: 1.6em 0 0.6em;
+  line-height: 1.32;
+  letter-spacing: -0.01em;
+}
+
+.custom-body h1 {
+  font-size: 1.9em;
+}
+
+.custom-body h2 {
+  font-size: 1.5em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--border);
+}
+
+.custom-body h3 {
+  font-size: 1.24em;
+}
+
+.custom-body h4 {
+  font-size: 1.08em;
+}
+
+.custom-body p {
+  margin: 1em 0;
+}
+
+.custom-body ul,
+.custom-body ol {
+  margin: 1em 0;
+  padding-left: 1.6em;
+  list-style: revert;
+}
+
+.custom-body li {
+  margin: 0.4em 0;
+}
+
+.custom-body li > p {
+  margin: 0.25em 0;
+}
+
+.custom-body blockquote {
+  margin: 1.4em 0;
+  padding: 0.9em 1.3em;
+  border-left: 3px solid var(--prax-orange);
+  background: rgba(195, 76, 24, 0.05);
+  border-radius: 0 var(--r-md) var(--r-md) 0;
+  color: var(--text-soft);
+}
+
+.custom-body blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+.custom-body code {
+  padding: 0.16em 0.44em;
+  border-radius: 5px;
+  background: rgba(36, 26, 20, 0.07);
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+.custom-body pre {
+  margin: 1.3em 0;
+  padding: 18px 20px;
+  border-radius: var(--r-md);
+  background: #241a14;
+  color: #f4ece5;
+  overflow-x: auto;
+}
+
+.custom-body pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+  font-size: 13.5px;
+  line-height: 1.75;
+}
+
+.custom-body img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--r-md);
+  margin: 1.1em 0;
+}
+
+.custom-body a {
+  color: var(--prax-orange-600);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+}
+
+.custom-body a:hover {
+  color: var(--prax-orange);
+}
+
+.custom-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.4em 0;
+  font-size: 15px;
+  display: block;
+  overflow-x: auto;
+}
+
+.custom-body th,
+.custom-body td {
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.custom-body th {
+  background: var(--surface-2);
+  font-weight: 700;
+}
+
+.custom-body hr {
+  margin: 2em 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+.custom-body details {
+  margin: 1.3em 0;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+
+.custom-body summary {
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.custom-body del {
+  opacity: 0.65;
+}
+
+/* 深橙皮肤（layout=portal）下的正文配色 */
+.page-portal .custom-head {
+  border-bottom-color: rgba(255, 255, 255, 0.16);
+}
+
+.page-portal .custom-title {
+  color: #fff;
+}
+
+.page-portal .custom-summary {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.page-portal .custom-meta {
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.page-portal .custom-body {
+  color: rgba(255, 255, 255, 0.84);
+}
+
+.page-portal .custom-body h1,
+.page-portal .custom-body h2,
+.page-portal .custom-body h3,
+.page-portal .custom-body h4 {
+  color: #fff;
+}
+
+.page-portal .custom-body h2 {
+  border-bottom-color: rgba(255, 255, 255, 0.16);
+}
+
+.page-portal .custom-body a {
+  color: var(--prax-yellow);
+}
+
+.page-portal .custom-body a:hover {
+  color: #fff;
+}
+
+.page-portal .custom-body blockquote {
+  background: rgba(255, 255, 255, 0.06);
+  border-left-color: var(--prax-yellow);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.page-portal .custom-body code {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--prax-yellow-200);
+}
+
+.page-portal .custom-body pre {
+  background: rgba(0, 0, 0, 0.42);
+}
+
+.page-portal .custom-body th {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.page-portal .custom-body th,
+.page-portal .custom-body td {
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.page-portal .custom-body details {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+/* HTML 模式下用户可能写内联样式的卡片，给个默认观感兜底 */
+.custom-body .prax-card,
+.custom-body .card-block {
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  margin: 1.2em 0;
+}
+
+@media (max-width: 820px) {
+  .custom-page {
+    padding: calc(var(--header-h) + 32px) 0 64px;
+  }
+
+  .custom-body {
+    font-size: 16px;
+  }
+
+  .custom-article {
+    max-width: 100%;
+  }
+}

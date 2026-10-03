@@ -1,0 +1,21 @@
+{
+  "name": "prax-portal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "橙曦澎湃 Project Rootpi & Xiaocheng (Prax) 门户网站与 OA 系统",
+  "main": "server/index.js",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "seed": "node server/seed.js",
+    "admin:reset": "node server/scripts/reset-admin.js",
+    "images": "python tools/generate_assets.py"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "multer": "^2.0.2"
+  }
+}

@@ -8,7 +8,67 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { DatabaseSync } = require('node:sqlite');
+
+/**
+ * 版本自检（部署到宝塔/容器前后最容易踩的坑）
+ *
+ * node:sqlite 的可用边界（据 Node 官方文档）：
+ *   v22.5.0  新增，但**必须**加 --experimental-sqlite 才能 require
+ *   v22.13.0 / v23.4.0  移出 flag，可以直接 require（仍标注 experimental）
+ *   v24+     持续可用；v25.7.0 起转为 release candidate
+ *
+ * 所以「不带 flag 就能跑」的最低版本是 22.13.0。
+ * 面板上如果装了 22.5~22.12 之间的版本，会报 ERR_UNKNOWN_BUILTIN_MODULE，
+ * 报错信息很难懂，这里提前拦住并说清原因与解决办法。
+ */
+const NODE_MIN = [22, 13, 0];
+function checkNodeVersion() {
+  const cur = process.versions.node.split('.').map(Number);
+  const tooOld =
+    cur[0] < NODE_MIN[0] ||
+    (cur[0] === NODE_MIN[0] &&
+      (cur[1] < NODE_MIN[1] || (cur[1] === NODE_MIN[1] && cur[2] < NODE_MIN[2])));
+  if (!tooOld) return;
+
+  // 旧版本仍可通过显式 flag 使用，给出两条出路
+  const hasFlag = process.execArgv.some((a) => a.includes('experimental-sqlite'));
+  const canFlag = cur[0] === 22 && cur[1] >= 5;
+  if (canFlag && hasFlag) return;
+
+  console.error('');
+  console.error('  ┌────────────────────────────────────────────────────────────┐');
+  console.error('  │  启动失败：Node.js 版本过低                                │');
+  console.error('  └────────────────────────────────────────────────────────────┘');
+  console.error('');
+  console.error(`  当前版本：v${process.versions.node}`);
+  console.error(`  需要版本：v22.13.0 或更高（推荐 v24 LTS）`);
+  console.error('');
+  console.error('  原因：本项目使用 Node 内置的 node:sqlite，');
+  console.error('        它从 v22.13.0 起才能免 --experimental-sqlite 标志直接使用。');
+  console.error('');
+  if (canFlag) {
+    console.error('  临时办法：加标志启动');
+    console.error('    node --experimental-sqlite server/index.js');
+    console.error('');
+  }
+  console.error('  推荐做法：升级 Node.js');
+  console.error('    宝塔面板 → 网站 → Node 项目 → 版本管理 → 安装 v24 LTS');
+  console.error('');
+  process.exit(1);
+}
+checkNodeVersion();
+
+let DatabaseSync;
+try {
+  ({ DatabaseSync } = require('node:sqlite'));
+} catch (e) {
+  console.error('');
+  console.error('  无法加载 node:sqlite 模块。');
+  console.error(`  当前 Node 版本：v${process.versions.node}`);
+  console.error('  请升级到 v22.13.0 以上（推荐 v24 LTS）。');
+  console.error('');
+  process.exit(1);
+}
 
 const ROOT = path.resolve(__dirname, '..');
 const DATA_DIR = process.env.PRAX_DATA_DIR

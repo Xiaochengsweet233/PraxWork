@@ -11,7 +11,7 @@
 
 ### 环境要求
 
-- **Node.js ≥ 22.5**（用到内置的 `node:sqlite`，无需任何原生编译依赖）
+- **Node.js ≥ 22.13.0**（推荐 24 LTS；用到内置的 `node:sqlite`，无需任何原生编译依赖）
 
 ### 本地启动
 
@@ -161,7 +161,34 @@ public/assets/pattern/  SVG 纹样（柑橘切面、点阵、波浪分隔）
 
 ---
 
-## 四、Docker 部署
+## 四、部署
+
+### 宝塔面板部署
+
+见 **[docs/宝塔部署.md](docs/宝塔部署.md)** —— 从装 Node 到 HTTPS、备份、更新的完整步骤。
+
+要点先说三条：
+
+1. **Node.js 必须 ≥ 22.13.0**（推荐 24 LTS）。本项目用 Node 内置的 `node:sqlite`，
+   22.5~22.12 需要额外标志才能用；项目已内置版本自检，版本不对会给出中文提示。
+2. 进程守护用 PM2，项目已附带 `ecosystem.config.js`：
+   ```bash
+   npm install --omit=dev
+   pm2 start ecosystem.config.js && pm2 save
+   ```
+3. 用宝塔的**反向代理**指到 `http://127.0.0.1:3000`，
+   **不要**把站点根目录指向项目目录（静态资源由 Node 自己提供）。
+
+### 健康检查
+
+```bash
+curl http://127.0.0.1:3000/healthz
+# {"ok":true,"status":"healthy",...}
+```
+
+可用作宝塔/PM2/负载均衡的探活地址；数据库不可用时返回 503。
+
+### Docker 部署
 
 ```bash
 docker compose up -d --build
@@ -170,6 +197,7 @@ docker compose up -d --build
 - 数据（SQLite + 上传文件）持久化在 `prax-data` 卷中，重建容器不丢数据
 - 默认端口 `3000`，可用 `PRAX_ADMIN_PASSWORD` 指定初始管理员口令
 - 内置 healthcheck
+- 可用 `PRAX_DATA_DIR` / `PRAX_DB_FILE` / `PRAX_UPLOAD_DIR` 把数据与代码分离
 
 ---
 
@@ -258,8 +286,9 @@ OA 任务流转与审批决策、审计日志落库、角色权限隔离、图�
 
 ## 七、技术说明
 
-- **为什么用 `node:sqlite`**：Node 22.5+ 内置，无需 `better-sqlite3` 之类的原生编译，
-  换机器、上容器都不用重装工具链。
+- **为什么用 `node:sqlite`**：Node 22.13+ 内置，无需 `better-sqlite3` 之类的原生编译，
+  换机器、上容器、装宝塔都不用重装工具链。
+  （22.5~22.12 虽然也有该模块，但需要 `--experimental-sqlite` 标志，故最低要求定在 22.13。）
 - **为什么不用前端框架**：门户与后台都是内容型页面，服务端渲染 + 少量原生 JS
   已经够用，且部署时不需要构建步骤，改完刷新即可。
 - **安全性**：scrypt 口令哈希、HttpOnly 会话 Cookie、CSP 与若干安全响应头、

@@ -12,7 +12,7 @@ echo
 
 if ! command -v node >/dev/null 2>&1; then
   echo "  [错误] 没有检测到 Node.js。"
-  echo "  请先安装 Node.js 22.5 或更高版本：https://nodejs.org/"
+  echo "  请先安装 Node.js 22.13 或更高版本（推荐 24 LTS）：https://nodejs.org/"
   exit 1
 fi
 

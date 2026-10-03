@@ -12,7 +12,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const express = require('express');
 
-const { DB_FILE, getSettings } = require('./db');
+const { DB_FILE, getSettings, get } = require('./db');
 const auth = require('./auth');
 const { seed } = require('./seed');
 const siteRoutes = require('./routes/site');
@@ -94,6 +94,18 @@ if (path.resolve(UPLOAD_DIR) !== path.resolve(path.join(PUBLIC_DIR, 'uploads')))
 }
 
 /* ---------------------------------------------------------------- 路由 */
+
+// 健康检查：供宝塔／负载均衡／PM2 探活使用。
+// 只回报服务与数据库是否可用，不泄露任何内部信息。
+app.get('/healthz', (req, res) => {
+  try {
+    const r = get('SELECT 1 AS ok');
+    if (!r || Number(r.ok) !== 1) throw new Error('db probe failed');
+    res.json({ ok: true, status: 'healthy', time: new Date().toISOString() });
+  } catch (e) {
+    res.status(503).json({ ok: false, status: 'unhealthy' });
+  }
+});
 
 app.use(siteRoutes);
 app.use(adminRoutes);

@@ -16,7 +16,7 @@ echo.
 where node >nul 2>nul
 if errorlevel 1 (
   echo   [错误] 没有检测到 Node.js。
-  echo   请先安装 Node.js 22.5 或更高版本：https://nodejs.org/
+  echo   请先安装 Node.js 22.13 或更高版本（推荐 24 LTS）：https://nodejs.org/
   echo.
   pause
   exit /b 1

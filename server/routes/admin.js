@@ -32,12 +32,22 @@ fs.mkdirSync(UP_DIR, { recursive: true });
 /* ---------------------------------------------------------------- 上传配置 */
 
 const ALLOWED_MIME = new Map([
+  // 图片
   ['image/png', '.png'],
   ['image/jpeg', '.jpg'],
   ['image/webp', '.webp'],
   ['image/gif', '.gif'],
   ['image/avif', '.avif'],
   ['image/svg+xml', '.svg'],
+  // 视频
+  ['video/mp4', '.mp4'],
+  ['video/webm', '.webm'],
+  ['video/ogg', '.ogv'],
+  ['video/quicktime', '.mov'],
+  // 音频
+  ['audio/mpeg', '.mp3'],
+  ['audio/ogg', '.ogg'],
+  ['audio/wav', '.wav'],
 ]);
 
 const upload = multer({
@@ -49,14 +59,22 @@ const upload = multer({
       cb(null, name);
     },
   }),
-  limits: { fileSize: 12 * 1024 * 1024, files: 12 },
+  limits: { fileSize: 200 * 1024 * 1024, files: 12 },
   fileFilter: (req, file, cb) => {
     if (!ALLOWED_MIME.has(file.mimetype)) {
-      return cb(new Error('仅支持 PNG / JPEG / WebP / GIF / AVIF / SVG 图片'));
+      return cb(new Error('仅支持图片（PNG/JPEG/WebP/GIF/AVIF/SVG）、视频（MP4/WebM/OGG/MOV）或音频（MP3/OGG/WAV）'));
     }
     cb(null, true);
   },
 });
+
+/** 依据 MIME 判断媒体类型 */
+function kindOfMime(mime) {
+  if (String(mime).startsWith('image/')) return 'image';
+  if (String(mime).startsWith('video/')) return 'video';
+  if (String(mime).startsWith('audio/')) return 'audio';
+  return 'file';
+}
 
 /* ---------------------------------------------------------------- 工具 */
 
@@ -241,9 +259,14 @@ router.get('/admin/login', (req, res) => {
         </div>
         <button class="btn btn-primary btn-lg btn-block" type="submit">${R.icon('shield', 18)}登录</button>
       </form>
-      <div class="login-hint">
+      ${
+        // 默认显示提示；只有显式设为 false/0/'0'/'false' 才隐藏（兼容旧库无此键）
+        (s.show_login_hint !== false && s.show_login_hint !== 0 && s.show_login_hint !== '0' && s.show_login_hint !== 'false')
+          ? `<div class="login-hint">
         <b>首次使用</b>：默认管理员账号为 <span class="mono">admin</span>，初始密码 <span class="mono">admin123</span>。登录后请立即在「成员与权限」中修改密码。
-      </div>
+      </div>`
+          : ''
+      }
       <div style="text-align:center;margin-top:18px">
         <a class="btn btn-ghost btn-sm" href="/">${R.icon('home', 15)}返回门户</a>
       </div>
@@ -671,22 +694,68 @@ router.get('/admin/board', auth.requireAuth, auth.requirePerm('oa'), (req, res) 
 
 router.get('/admin/media', auth.requireAuth, auth.requirePerm('media'), (req, res) => {
   const list = all('SELECT * FROM media ORDER BY id DESC LIMIT 200');
+  const imageCount = list.filter((m) => m.kind === 'image').length;
+  const videoCount = list.filter((m) => m.kind === 'video' || m.kind === 'audio').length;
+
+  const mediaCards = (m) => {
+    const isVideo = m.kind === 'video';
+    const isAudio = m.kind === 'audio';
+    return `<div class="media-card">
+      ${
+        isVideo
+          ? `<video src="${R.escAttr(m.url)}" controls preload="metadata" class="media-card__video"></video>`
+          : isAudio
+          ? `<div class="media-card__audio"><span class="media-card__audio-ico">${R.icon(
+              'bolt',
+              26
+            )}</span><audio src="${R.escAttr(m.url)}" controls preload="metadata"></audio></div>`
+          : `<img src="${R.escAttr(m.url)}" alt="${R.escAttr(m.original_name)}" loading="lazy">`
+      }
+      <div class="media-card__body">
+        <div class="media-card__name" title="${R.escAttr(m.original_name || m.filename)}">${R.esc(
+      R.truncate(m.original_name || m.filename, 24)
+    )}</div>
+        <div class="media-card__meta">${R.badge(m.kind === 'image' ? 'info' : m.kind === 'video' ? 'warn' : 'muted', m.kind === 'image' ? '图片' : m.kind === 'video' ? '视频' : '音频')}<span>${R.fmtBytes(
+      m.size
+    )}</span>${
+      m.width ? `<span>${m.width}×${m.height}</span>` : ''
+    }<span>${R.timeAgo(m.created_at)}</span></div>
+      </div>
+      <div class="media-card__act">
+        <button class="btn btn-ghost btn-sm" type="button" data-copy="${R.escAttr(m.url)}">复制链接</button>
+        <button class="btn btn-ghost btn-sm" type="button" data-action="delete" data-url="/api/media/${
+          m.id
+        }" data-confirm="确定删除这个媒体文件吗？">删除</button>
+      </div>
+    </div>`;
+  };
 
   const body = `
 <div class="page-head">
-  <div class="muted" style="font-size:13px">共 ${list.length} 个文件（最多显示最近 200 个）</div>
+  <div class="muted" style="font-size:13px">共 ${list.length} 个文件 · 图片 ${imageCount} · 视频/音频 ${videoCount}（最多显示最近 200 个）</div>
 </div>
 
 <div class="panel">
-  <div class="panel__head"><h3>上传图片</h3></div>
+  <div class="panel__head"><h3>上传媒体</h3></div>
   <div class="panel__body">
     <label class="dropzone" id="dropzone">
-      <input type="file" id="fileInput" accept="image/*" multiple hidden>
+      <input type="file" id="fileInput" accept="image/*,video/*,audio/*" multiple hidden>
       ${R.icon('image', 30)}
-      <b>点击选择，或把图片拖到这里</b>
-      <span>支持 PNG / JPEG / WebP / GIF / AVIF / SVG，单个不超过 12 MB</span>
+      <b>点击选择，或把图片 / 视频 / 音频拖到这里</b>
+      <span>图片（PNG/JPEG/WebP/GIF/AVIF/SVG）· 视频（MP4/WebM/OGG/MOV）· 音频（MP3/OGG/WAV），单个不超过 200 MB</span>
     </label>
     <div id="uploadList" class="row-inline" style="margin-top:14px"></div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel__head"><h3>添加外链媒体</h3></div>
+  <div class="panel__body">
+    <form id="extLinkForm" class="row-inline">
+      <input class="input" id="extLinkUrl" name="url" placeholder="粘贴外部图片或视频链接，例如 https://example.com/video.mp4" style="flex:1;min-width:260px">
+      <button class="btn btn-primary" type="submit">${R.icon('plus', 15)}添加外链</button>
+    </form>
+    <div class="hint" style="margin-top:8px">支持 http(s) 图片 / 视频 / 音频直链；会作为媒体条目保存，可在页面里直接引用。</div>
   </div>
 </div>
 
@@ -697,28 +766,8 @@ router.get('/admin/media', auth.requireAuth, auth.requirePerm('media'), (req, re
   <div class="panel__body">
     ${
       list.length
-        ? `<div class="media-grid">${list
-            .map(
-              (m) => `<div class="media-card">
-      <img src="${R.escAttr(m.url)}" alt="${R.escAttr(m.original_name)}" loading="lazy">
-      <div class="media-card__body">
-        <div class="media-card__name" title="${R.escAttr(m.original_name || m.filename)}">${R.esc(
-                R.truncate(m.original_name || m.filename, 24)
-              )}</div>
-        <div class="media-card__meta"><span>${R.fmtBytes(m.size)}</span>${
-                m.width ? `<span>${m.width}×${m.height}</span>` : ''
-              }<span>${R.timeAgo(m.created_at)}</span></div>
-      </div>
-      <div class="media-card__act">
-        <button class="btn btn-ghost btn-sm" type="button" data-copy="${R.escAttr(m.url)}">复制链接</button>
-        <button class="btn btn-ghost btn-sm" type="button" data-action="delete" data-url="/api/media/${
-          m.id
-        }" data-confirm="确定删除这张图片吗？">删除</button>
-      </div>
-    </div>`
-            )
-            .join('')}</div>`
-        : `<div class="empty">${R.icon('image', 32)}<p>媒体库还是空的，先上传一张图片吧。</p></div>`
+        ? `<div class="media-grid">${list.map(mediaCards).join('')}</div>`
+        : `<div class="empty">${R.icon('image', 32)}<p>媒体库还是空的，先上传或添加一个外链媒体吧。</p></div>`
     }
   </div>
 </div>
@@ -728,6 +777,8 @@ router.get('/admin/media', auth.requireAuth, auth.requirePerm('media'), (req, re
   var dz = document.getElementById('dropzone');
   var input = document.getElementById('fileInput');
   var listBox = document.getElementById('uploadList');
+  var extForm = document.getElementById('extLinkForm');
+  var extUrl = document.getElementById('extLinkUrl');
 
   function doUpload(files){
     if (!files || !files.length) return;
@@ -757,6 +808,25 @@ router.get('/admin/media', auth.requireAuth, auth.requirePerm('media'), (req, re
   });
   dz.addEventListener('drop', function(e){
     if (e.dataTransfer && e.dataTransfer.files) doUpload(e.dataTransfer.files);
+  });
+
+  // 外链媒体
+  extForm.addEventListener('submit', function(e){
+    e.preventDefault();
+    var url = extUrl.value.trim();
+    if (!url) { window.praxToast('请先粘贴外链地址', 'err'); return; }
+    fetch('/api/media/external', {
+      method:'POST', credentials:'same-origin',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ url: url })
+    })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if (!d.ok) throw new Error(d.error || '添加失败');
+        window.praxToast('已添加外链媒体', 'ok');
+        setTimeout(function(){ location.reload(); }, 500);
+      })
+      .catch(function(e){ window.praxToast(e.message, 'err'); });
   });
 
   // 复制链接
@@ -942,6 +1012,14 @@ const SETTING_GROUPS = [
       { name: 'theme_primary', label: '主色', type: 'color' },
       { name: 'theme_accent', label: '强调色', type: 'color' },
       { name: 'theme_cream', label: '纸面色', type: 'color' },
+    ],
+  },
+  {
+    title: '安全与提示',
+    icon: 'shield',
+    desc: '控制登录页默认管理员提示等安全相关展示。',
+    fields: [
+      { name: 'show_login_hint', label: '登录页显示默认账号提示', type: 'bool', hint: '关闭后登录页不再显示「默认管理员 admin / admin123」的首次使用提示' },
     ],
   },
 ];
@@ -1234,15 +1312,18 @@ router.post('/api/media/upload', auth.requireAuth, auth.requirePerm('media'), (r
     const items = [];
     for (const f of files) {
       const url = '/uploads/' + f.filename;
+      const kind = kindOfMime(f.mimetype);
       let width = 0;
       let height = 0;
 
-      // 从文件头读取图片尺寸（PNG/JPEG/GIF/WebP），失败也不影响上传
-      try {
-        const dims = readImageSize(path.join(UP_DIR, f.filename), f.mimetype);
-        width = dims.width;
-        height = dims.height;
-      } catch (_) {}
+      // 从文件头读取图片尺寸（PNG/JPEG/GIF/WebP），失败也不影响上传；视频/音频无尺寸
+      if (kind === 'image') {
+        try {
+          const dims = readImageSize(path.join(UP_DIR, f.filename), f.mimetype);
+          width = dims.width;
+          height = dims.height;
+        } catch (_) {}
+      }
 
       const info = run(
         `INSERT INTO media (filename, original_name, url, mime, size, width, height, kind, uploaded_by)
@@ -1254,15 +1335,51 @@ router.post('/api/media/upload', auth.requireAuth, auth.requirePerm('media'), (r
         f.size || 0,
         width,
         height,
-        'image',
+        kind,
         req.user.id
       );
-      items.push({ id: Number(info.lastInsertRowid), url, name: f.originalname, width, height });
+      items.push({ id: Number(info.lastInsertRowid), url, name: f.originalname, width, height, kind });
     }
 
     auth.logAudit(req, 'upload', 'media', '', `上传 ${items.length} 个文件：${items.map((i) => i.name).join(', ')}`);
     res.json({ ok: true, items });
   });
+});
+
+/** 添加外链媒体：把外部图片/视频/音频直链存成一条媒体记录 */
+router.post('/api/media/external', auth.requireAuth, auth.requirePerm('media'), express.json({ limit: '16kb' }), (req, res) => {
+  const raw = String((req.body && req.body.url) || '').trim();
+  if (!raw) return res.status(400).json({ ok: false, error: '请提供外链地址' });
+
+  // 只允许 http(s) 协议，拦掉 javascript: / data: / file: 等危险协议
+  if (!/^https?:\/\//i.test(raw)) {
+    return res.status(400).json({ ok: false, error: '仅支持 http(s) 外链地址' });
+  }
+
+  // 依据扩展名或 URL 特征推断媒体类型
+  const lower = raw.toLowerCase();
+  let kind = 'image';
+  if (/\.(mp4|webm|ogv|mov|m4v)(\?|$)/i.test(lower) || /\/video\//i.test(lower)) kind = 'video';
+  else if (/\.(mp3|ogg|wav|m4a|flac)(\?|$)/i.test(lower) || /\/audio\//i.test(lower)) kind = 'audio';
+  else if (/\.(png|jpe?g|webp|gif|avif|svg)(\?|$)/i.test(lower)) kind = 'image';
+  else if (/\.(gifv)(\?|$)/i.test(lower)) kind = 'video';
+
+  const info = run(
+    `INSERT INTO media (filename, original_name, url, mime, size, width, height, kind, uploaded_by)
+     VALUES (?,?,?,?,?,?,?,?,?)`,
+    '',
+    raw.slice(0, 120),
+    raw,
+    kind === 'image' ? 'image/external' : kind === 'video' ? 'video/external' : 'audio/external',
+    0,
+    0,
+    0,
+    kind,
+    req.user.id
+  );
+
+  auth.logAudit(req, 'upload', 'media', '', `添加外链媒体：${raw.slice(0, 120)}`);
+  res.json({ ok: true, id: Number(info.lastInsertRowid), url: raw, kind });
 });
 
 /** 极简图片尺寸读取（避免引入图像库） */

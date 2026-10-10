@@ -64,6 +64,8 @@ blocked('DOCTYPE', '<!DOCTYPE html><p>x</p>', '<!DOCTYPE');
 blocked('src 用非图片 data:', '<img src="data:text/html;base64,PHNjcmlwdD4=">', 'data:text/html');
 blocked('srcdoc', '<div srcdoc="<script>alert(1)</script>">x</div>', 'srcdoc');
 blocked('formaction', '<button formaction="//evil.com">x</button>', 'formaction');
+blocked('video 的 javascript: src', '<video src="javascript:alert(1)"></video>', 'javascript:');
+blocked('video 的 data: src', '<video src="data:video/mp4;base64,xxx"></video>', 'data:video');
 
 console.log('\n[必须保留的：正常排版]');
 kept('普通段落', '<p>你好</p>', '<p>你好</p>');
@@ -81,6 +83,10 @@ kept('br / hr', '<br><hr>', '<br>');
 kept('details/summary', '<details><summary>展开</summary>内容</details>', '<summary>展开</summary>');
 kept('style 标签保留（内部已过滤）', '<style>.a{color:red}</style>', '.a{color:red}');
 kept('中文与实体', '<p>橙曦澎湃 &amp; Prax</p>', '橙曦澎湃');
+kept('视频 video + source', '<video controls><source src="/uploads/a.mp4" type="video/mp4"></video>', 'src="/uploads/a.mp4"');
+kept('视频外链', '<video src="https://example.com/a.mp4" controls></video>', 'src="https://example.com/a.mp4"');
+kept('音频 audio', '<audio src="/uploads/a.mp3" controls></audio>', 'src="/uploads/a.mp3"');
+kept('视频 controls 属性', '<video src="/uploads/a.mp4" controls muted loop playsinline></video>', 'controls');
 
 console.log('\n[边界情况]');
 ok('空输入', c.sanitizeHtml('') === '');

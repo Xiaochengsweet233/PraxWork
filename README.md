@@ -163,7 +163,33 @@ public/assets/pattern/  SVG 纹样（柑橘切面、点阵、波浪分隔）
 
 ## 四、部署
 
-### 宝塔面板部署
+### 方式一：Docker 部署（推荐 · 主部署方式）
+
+```bash
+docker compose up -d --build
+```
+
+- 数据（SQLite + 上传文件）持久化在 `prax-data` 卷中，重建/更新容器**不丢数据**
+- 默认端口 `3000`
+- 首次启动可用 `PRAX_ADMIN_PASSWORD` 指定初始管理员口令（默认 `admin123`，登录后请立即修改）
+- 内置 healthcheck
+- 可用 `PRAX_DATA_DIR` / `PRAX_DB_FILE` / `PRAX_UPLOAD_DIR` 把数据与代码分离
+
+### 自动更新（Docker）
+
+```bash
+# Linux / macOS
+./scripts/update.sh
+
+# Windows
+scripts\update.bat
+```
+
+脚本会：`git pull` → `docker compose build` → `docker compose up -d`。
+由于数据库与上传文件都在 `prax-data` 卷里、且已在 `.gitignore` 中排除，
+**更新只替换代码，不会覆盖你网站上的任何内容**。
+
+### 方式二：宝塔面板部署
 
 见 **[docs/宝塔部署.md](docs/宝塔部署.md)** —— 从装 Node 到 HTTPS、备份、更新的完整步骤。
 
@@ -187,17 +213,6 @@ curl http://127.0.0.1:3000/healthz
 ```
 
 可用作宝塔/PM2/负载均衡的探活地址；数据库不可用时返回 503。
-
-### Docker 部署
-
-```bash
-docker compose up -d --build
-```
-
-- 数据（SQLite + 上传文件）持久化在 `prax-data` 卷中，重建容器不丢数据
-- 默认端口 `3000`，可用 `PRAX_ADMIN_PASSWORD` 指定初始管理员口令
-- 内置 healthcheck
-- 可用 `PRAX_DATA_DIR` / `PRAX_DB_FILE` / `PRAX_UPLOAD_DIR` 把数据与代码分离
 
 ---
 

@@ -14,7 +14,7 @@ const express = require('express');
 
 const { DB_FILE, getSettings, get } = require('./db');
 const auth = require('./auth');
-const { seed } = require('./seed');
+const { seed, seedSettings } = require('./seed');
 const siteRoutes = require('./routes/site');
 const adminRoutes = require('./routes/admin');
 
@@ -142,9 +142,11 @@ a{display:inline-block;padding:10px 22px;border-radius:999px;background:#c34c18;
 /* ---------------------------------------------------------------- 启动 */
 
 function boot() {
-  // 首次运行自动灌入种子数据
+  // 首次运行自动灌入种子数据；同时始终补全缺失的设置项（幂等），
+  // 保证新增的设置键（如 show_login_hint）在旧库上升级后也能生效。
   try {
     const { get } = require('./db');
+    seedSettings();
     const r = get('SELECT COUNT(*) AS c FROM users');
     if (!r || Number(r.c) === 0) {
       console.log('检测到空数据库，正在初始化…');

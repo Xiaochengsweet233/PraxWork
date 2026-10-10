@@ -754,34 +754,39 @@ function resourceForm(ctx, res, row) {
 
 function mediaPickerModal(mediaList) {
   const items = mediaList
-    .map(
-      (m) => `<button class="media-item" type="button" data-action="pick" data-url-value="${R.escAttr(
-        m.url
-      )}">
-  <img src="${R.escAttr(m.url)}" alt="${R.escAttr(m.original_name || m.filename)}" loading="lazy">
+    .map((m) => {
+      const isVideo = m.kind === 'video';
+      const isAudio = m.kind === 'audio';
+      const preview = isVideo
+        ? `<video class="media-item__video" src="${R.escAttr(m.url)}" muted preload="metadata"></video>`
+        : isAudio
+        ? `<span class="media-item__audio">${R.icon('bolt', 20)}</span>`
+        : `<img src="${R.escAttr(m.url)}" alt="${R.escAttr(m.original_name || m.filename)}" loading="lazy">`;
+      return `<button class="media-item" type="button" data-action="pick" data-url-value="${R.escAttr(m.url)}">
+  ${preview}
   <span>${R.esc(R.truncate(m.original_name || m.filename, 22))}</span>
-</button>`
-    )
+</button>`;
+    })
     .join('');
 
   return `<div class="modal" id="mediaModal" role="dialog" aria-modal="true" aria-label="媒体库">
   <div class="modal__veil" data-modal-close></div>
   <div class="modal__panel modal-lg">
     <div class="modal__head">
-      <h3>选择图片</h3>
+      <h3>选择媒体</h3>
       <button class="modal__x" type="button" data-modal-close aria-label="关闭">${R.icon('close', 18)}</button>
     </div>
     <div class="modal__body">
       ${
         mediaList.length
           ? `<div class="media-grid">${items}</div>`
-          : `<div class="empty">${R.icon('image', 32)}<p>媒体库还是空的，先上传一张图片吧。</p></div>`
+          : `<div class="empty">${R.icon('image', 32)}<p>媒体库还是空的，先上传或添加一个外链媒体吧。</p></div>`
       }
     </div>
     <div class="modal__foot">
       <label class="btn btn-primary btn-sm" style="cursor:pointer">
-        ${R.icon('plus', 15)}上传新图片
-        <input type="file" accept="image/*" hidden data-upload-for="__new__">
+        ${R.icon('plus', 15)}上传新媒体
+        <input type="file" accept="image/*,video/*,audio/*" hidden data-upload-for="__new__">
       </label>
       <a class="btn btn-ghost btn-sm" href="/admin/media">进入媒体库</a>
     </div>

@@ -220,73 +220,78 @@
   opacity: 0.65;
 }
 
-/* 深橙皮肤（layout=portal）下的正文配色 */
+/* portal 皮肤（现已米白底，与 cream 皮肤视觉一致，仅保留页头页脚主题）下的正文配色 */
 .page-portal .custom-head {
-  border-bottom-color: rgba(255, 255, 255, 0.16);
+  border-bottom-color: var(--border);
 }
 
 .page-portal .custom-title {
-  color: #fff;
+  color: var(--text);
 }
 
 .page-portal .custom-summary {
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-soft);
 }
 
 .page-portal .custom-meta {
-  color: rgba(255, 255, 255, 0.58);
+  color: var(--text-mute);
 }
 
 .page-portal .custom-body {
-  color: rgba(255, 255, 255, 0.84);
+  color: var(--text-soft);
 }
 
 .page-portal .custom-body h1,
 .page-portal .custom-body h2,
 .page-portal .custom-body h3,
 .page-portal .custom-body h4 {
-  color: #fff;
+  color: var(--text);
 }
 
 .page-portal .custom-body h2 {
-  border-bottom-color: rgba(255, 255, 255, 0.16);
+  border-bottom-color: var(--border);
 }
 
 .page-portal .custom-body a {
-  color: var(--prax-yellow);
+  color: var(--prax-orange-600);
 }
 
 .page-portal .custom-body a:hover {
-  color: #fff;
+  color: var(--prax-orange);
 }
 
 .page-portal .custom-body blockquote {
-  background: rgba(255, 255, 255, 0.06);
-  border-left-color: var(--prax-yellow);
-  color: rgba(255, 255, 255, 0.8);
+  background: rgba(195, 76, 24, 0.05);
+  border-left-color: var(--prax-orange);
+  color: var(--text-soft);
 }
 
 .page-portal .custom-body code {
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--prax-yellow-200);
+  background: rgba(36, 26, 20, 0.07);
+  color: var(--prax-orange-600);
 }
 
 .page-portal .custom-body pre {
-  background: rgba(0, 0, 0, 0.42);
+  background: #241a14;
+  color: #f4ece5;
+}
+
+.page-portal .custom-body pre code {
+  color: inherit;
 }
 
 .page-portal .custom-body th {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--surface-2);
 }
 
 .page-portal .custom-body th,
 .page-portal .custom-body td {
-  border-color: rgba(255, 255, 255, 0.16);
+  border-color: var(--border);
 }
 
 .page-portal .custom-body details {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.16);
+  background: var(--surface-2);
+  border-color: var(--border);
 }
 
 /* HTML 模式下用户可能写内联样式的卡片，给个默认观感兜底 */

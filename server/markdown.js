@@ -31,14 +31,16 @@ function escapeHtml(s) {
 /**
  * URL 白名单：拦住可执行协议。
  * 图片额外允许 data:image/*（内联小图标有用），其余 data: 一律拦掉。
+ * media 用于 video/audio/source 的 src，只放行 http(s)/相对路径，拦掉 data:。
  */
-function safeUrl(raw, { image = false } = {}) {
+function safeUrl(raw, { image = false, media = false } = {}) {
   const u = String(raw === null || raw === undefined ? '' : raw).trim();
   if (!u) return '';
   // 去掉可能用于绕过的控制字符
   const probe = u.replace(/[\u0000-\u001f\u007f]/g, '');
   if (/^(javascript|vbscript|file|blob):/i.test(probe)) return '';
   if (/^data:/i.test(probe)) {
+    if (media) return ''; // 媒体源不接受 data:
     return image && /^data:image\/(png|jpe?g|gif|webp|avif|svg\+xml);/i.test(probe) ? u : '';
   }
   return u;

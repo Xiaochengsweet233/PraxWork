@@ -1304,6 +1304,32 @@ hr {
   box-shadow: var(--sh-xs);
   position: relative;
   overflow: hidden;
+  transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease),
+    border-color var(--dur) var(--ease);
+}
+
+/* 顶部品牌渐变线：悬停点亮 */
+.stat::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 18px;
+  right: 18px;
+  height: 2px;
+  border-radius: 0 0 4px 4px;
+  background: var(--grad-accent);
+  opacity: 0.55;
+  transition: opacity var(--dur) var(--ease);
+}
+
+.stat:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--sh-md);
+  border-color: rgba(195, 76, 24, 0.26);
+}
+
+.stat:hover::before {
+  opacity: 1;
 }
 
 .stat::after {

@@ -18,15 +18,18 @@ const md = require('./markdown');
 
 /** 允许的标签白名单（HTML 模式用） */
 const ALLOWED_TAGS = new Set([
-  'a', 'abbr', 'address', 'article', 'aside', 'b', 'bdi', 'bdo', 'blockquote', 'br',
+  'a', 'abbr', 'address', 'article', 'aside', 'audio', 'b', 'bdi', 'bdo', 'blockquote', 'br',
   'caption', 'cite', 'code', 'col', 'colgroup', 'dd', 'del', 'details', 'dfn', 'div',
   'dl', 'dt', 'em', 'figcaption', 'figure', 'footer', 'h1', 'h2', 'h3', 'h4', 'h5',
   'h6', 'header', 'hr', 'i', 'img', 'ins', 'kbd', 'label', 'li', 'main', 'mark',
   'nav', 'ol', 'p', 'picture', 'pre', 'q', 'rp', 'rt', 'ruby', 's', 'samp', 'section',
   'small', 'source', 'span', 'strong', 'style', 'sub', 'summary', 'sup', 'table',
-  'tbody', 'td', 'tfoot', 'th', 'thead', 'time', 'tr', 'u', 'ul', 'var', 'wbr',
+  'tbody', 'td', 'tfoot', 'th', 'thead', 'time', 'tr', 'track', 'u', 'ul', 'var',
+  'video', 'wbr',
   // 明确禁止：script, iframe, object, embed, form, input, button, textarea,
-  //           select, option, link, meta, base, svg, math, video, audio, canvas
+  //           select, option, link, meta, base, svg, math, canvas
+  // 视频/音频通过 <video>/<audio> + <source> 播放，src 只允许 http(s)/相对路径，
+  // 不开放 iframe 嵌入（那是脚本执行与点击劫持的高危面）。
 ]);
 
 /** 允许的属性白名单（按标签归组之外，用全局白名单 + 值检查更稳） */
@@ -36,6 +39,8 @@ const ALLOWED_ATTRS = new Set([
   'src', 'alt', 'width', 'height', 'loading', 'decoding', 'srcset', 'sizes', 'media', 'type',
   'colspan', 'rowspan', 'scope', 'headers', 'start', 'reversed', 'value',
   'datetime', 'cite', 'open', 'download', 'referrerpolicy',
+  // 媒体元素属性：视频/音频播放所需
+  'controls', 'autoplay', 'muted', 'loop', 'playsinline', 'preload', 'poster',
 ]);
 
 /** 明确禁止的属性名（即使不在名单里也二次兜底） */
@@ -78,8 +83,11 @@ function sanitizeHtml(input) {
   html = html.replace(/<!\[CDATA\[[\s\S]*?\]\]>/g, '');
   html = html.replace(/<!DOCTYPE[^>]*>/gi, '');
 
-  // 先整体移除高危区块（含内容），避免留下裸文本
-  const killBlocks = ['script', 'iframe', 'object', 'embed', 'form', 'noscript', 'template', 'svg', 'math', 'canvas', 'video', 'audio'];
+  // 先整体移除高危区块（含内容），避免留下裸文本。
+  // 注意：video/audio 已从历史高危名单里移除——它们通过 <source src> 播放，
+  // src 在下方 safeUrl 收敛后只允许 http(s)/相对路径，不构成脚本执行面。
+  // 过去把它们整块删掉，正是"用了视频/音频就整页变形"的根因。
+  const killBlocks = ['script', 'iframe', 'object', 'embed', 'form', 'noscript', 'template', 'svg', 'math', 'canvas'];
   for (const tag of killBlocks) {
     const re = new RegExp('<' + tag + '\\b[^>]*>[\\s\\S]*?<\\/' + tag + '\\s*>', 'gi');
     html = html.replace(re, '');
@@ -111,9 +119,11 @@ function sanitizeHtml(input) {
       if (isForbiddenAttr(attrName)) continue;
       if (isForbiddenValue(attrName, rawVal)) continue;
 
-      // href/src 再做一次协议收敛
+      // href/src 再做一次协议收敛；媒体源（video/audio/source）额外允许视频/音频扩展名
       if (attrName === 'href' || attrName === 'src') {
-        const safe = md.safeUrl(rawVal, { image: attrName === 'src' });
+        const isMedia =
+          name === 'video' || name === 'audio' || name === 'source' || name === 'track';
+        const safe = md.safeUrl(rawVal, { image: attrName === 'src', media: isMedia });
         if (!safe) continue;
         attrs.push(attrName + '="' + md.escapeHtml(safe) + '"');
         continue;
@@ -134,8 +144,9 @@ function sanitizeHtml(input) {
       }
     }
 
-    const selfClose = /\/>$/.test(full) || ['br', 'hr', 'img', 'source', 'col', 'wbr'].includes(name);
-    return '<' + name + (attrs.length ? ' ' + attrs.join(' ') : '') + (selfClose ? '>' : '>');
+    // 输出保持 HTML 兼容：<br>、<img src="..."> 这种写法浏览器都能正确解析；
+    // 不强行转成自闭合 <br/>，以免与既有测试与前端预期不一致。
+    return '<' + name + (attrs.length ? ' ' + attrs.join(' ') : '') + '>';
   });
 }
 

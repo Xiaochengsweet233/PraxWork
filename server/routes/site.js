@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 /**
  * 前台路由：门户首页 / 工坊子页面 / 项目详情 / 公告详情
  */
@@ -211,7 +211,7 @@ ${R.siteHeader({ settings: s, user: req.user, navItems: nav, active: '/' })}
 
 <main id="main">
   <!-- 首屏 -->
-  <section class="hero on-dark">
+  <section class="hero">
     <div class="hero__bg">
       <img src="/assets/img/hero-portal.jpg" alt="" fetchpriority="high" decoding="async">
     </div>
@@ -307,7 +307,7 @@ ${R.siteHeader({ settings: s, user: req.user, navItems: nav, active: '/' })}
     showNews
       ? `
   <!-- 公告 -->
-  <section class="section sec-alt on-dark" id="news">
+  <section class="section sec-alt" id="news">
     <div class="wrap">
       <div class="sec-head reveal">
         <div>
@@ -329,7 +329,7 @@ ${R.siteHeader({ settings: s, user: req.user, navItems: nav, active: '/' })}
     showFriends
       ? `
   <!-- 友情链接 -->
-  <section class="section on-dark" id="friends">
+  <section class="section" id="friends">
     <div class="wrap">
       <div class="sec-head reveal">
         <div>
@@ -349,7 +349,7 @@ ${R.siteHeader({ settings: s, user: req.user, navItems: nav, active: '/' })}
   }
 
   <!-- 关于 -->
-  <section class="section sec-alt on-dark" id="about">
+  <section class="section sec-alt" id="about">
     <div class="wrap about-grid">
       <div class="reveal">
         <span class="eyebrow">About</span>
@@ -381,7 +381,7 @@ ${R.siteHeader({ settings: s, user: req.user, navItems: nav, active: '/' })}
     showContact
       ? `
   <!-- 联系 -->
-  <section class="section on-dark" id="contact">
+  <section class="section" id="contact">
     <div class="wrap contact-grid">
       <div class="reveal">
         <span class="eyebrow">Contact</span>
@@ -718,23 +718,25 @@ router.get('/p/:slug', (req, res, next) => {
   const body = `
 ${R.siteHeader({ settings: s, user: req.user, navItems: nav })}
 <main id="main" class="section" style="padding-top:calc(var(--header-h) + 60px)">
-  <div class="wrap-narrow">
+  <div class="wrap-narrow proj-detail">
     <a class="btn btn-ghost btn-sm" href="/" style="margin-bottom:24px">${R.icon('arrowRight', 15)}返回门户</a>
-    <span class="eyebrow">${R.esc(PROJECT_CAT[proj.category] || proj.category)}</span>
-    <h1 style="font-size:clamp(30px,4.6vw,50px);margin:14px 0 12px;color:#fff">${R.esc(proj.title)}</h1>
-    ${proj.subtitle ? `<p class="muted" style="letter-spacing:.1em;text-transform:uppercase;font-size:12.5px">${R.esc(proj.subtitle)}</p>` : ''}
+    <div class="proj-detail__head">
+      <span class="eyebrow">${R.esc(PROJECT_CAT[proj.category] || proj.category)}</span>
+      <h1>${R.esc(proj.title)}</h1>
+      ${proj.subtitle ? `<p class="proj-detail__sub">${R.esc(proj.subtitle)}</p>` : ''}
+    </div>
     ${
       proj.cover
-        ? `<div style="border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.14);margin:28px 0">
+        ? `<div class="proj-detail__cover">
              <img src="${R.escAttr(proj.cover)}" alt="${R.escAttr(proj.title)}"></div>`
         : ''
     }
-    <p class="lead" style="color:rgba(255,255,255,.8)">${R.esc(proj.summary)}</p>
-    <div class="prose" style="color:rgba(255,255,255,.78);margin-top:24px">${R.nl2p(proj.body)}</div>
-    <div class="proj__tags" style="margin:26px 0">${proj.tags
+    <p class="proj-detail__summary">${R.esc(proj.summary)}</p>
+    <div class="prose proj-detail__body">${R.nl2p(proj.body)}</div>
+    <div class="proj__tags proj-detail__tags">${proj.tags
       .map((t) => `<span class="tag">${R.esc(t)}</span>`)
       .join('')}</div>
-    <div class="hero__cta">
+    <div class="hero__cta proj-detail__cta">
       ${
         proj.link_url
           ? `<a class="btn btn-primary" href="${R.escAttr(proj.link_url)}"${
@@ -753,9 +755,9 @@ ${R.siteHeader({ settings: s, user: req.user, navItems: nav })}
     </div>
     ${
       related.length
-        ? `<div class="divider" style="margin:48px 0 32px;background:rgba(255,255,255,.14)"></div>
-           <h3 style="color:#fff;margin-bottom:18px">其他项目</h3>
-           <div class="proj__tags" style="gap:10px">${related
+        ? `<div class="divider" style="margin:48px 0 32px"></div>
+           <h3 class="proj-detail__related-title">其他项目</h3>
+           <div class="proj__tags proj-detail__tags" style="gap:10px">${related
              .map((x) => `<a class="tag" href="/p/${R.escAttr(x.slug)}">${R.esc(x.title)}</a>`)
              .join('')}</div>`
         : ''
@@ -872,17 +874,17 @@ router.get('/n/:id', (req, res, next) => {
   const body = `
 ${R.siteHeader({ settings: s, user: req.user, navItems: nav })}
 <main id="main" class="section" style="padding-top:calc(var(--header-h) + 60px)">
-  <div class="wrap-narrow">
+  <div class="wrap-narrow news-detail">
     <a class="btn btn-ghost btn-sm" href="/#news" style="margin-bottom:24px">${R.icon('arrowRight', 15)}返回公告</a>
-    <div class="news__title" style="font-size:clamp(26px,3.6vw,40px);color:#fff;line-height:1.25">
+    <div class="news-detail__title">
       ${a.pinned ? `<span class="pin">置顶</span>` : ''}${R.esc(a.title)}
     </div>
     <div class="at-detail__meta" style="margin-top:14px">
       <span class="badge badge-brand">${R.esc(a.tag)}</span>
       <span>${R.fmtDate(a.published_at, true)}</span>
     </div>
-    <p class="lead" style="margin:26px 0;color:rgba(255,255,255,.82)">${R.esc(a.summary)}</p>
-    <div class="prose" style="color:rgba(255,255,255,.78)">${R.nl2p(a.body)}</div>
+    <p class="news-detail__summary">${R.esc(a.summary)}</p>
+    <div class="prose news-detail__body">${R.nl2p(a.body)}</div>
   </div>
 </main>
 ${R.siteFooter({ settings: s, navItems: nav, friends, subpage: s.subpage_name })}

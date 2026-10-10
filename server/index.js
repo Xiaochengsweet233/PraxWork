@@ -180,6 +180,41 @@ function boot() {
     console.log('');
   });
 
+  // 端口占用 / 权限不足等监听错误：给清晰中文提示，而不是抛未捕获异常静默退出。
+  // 这是「启动没多久就自己关了」最常见的根因 —— 端口被上一个没关干净的实例占着。
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error('');
+      console.error('  ┌────────────────────────────────────────────────────────────┐');
+      console.error('  │  启动失败：端口被占用（EADDRINUSE）                         │');
+      console.error('  └────────────────────────────────────────────────────────────┘');
+      console.error('');
+      console.error(`  端口 ${PORT} 已被其它进程占用，请先停掉它再启动：`);
+      console.error('');
+      console.error('    查占用进程：');
+      console.error(`      Windows  netstat -ano | findstr :${PORT}`);
+      console.error(`      Linux    netstat -tlnp | grep ${PORT}`);
+      console.error('');
+      console.error('    或换一个端口启动：');
+      console.error(`      set PORT=3001 && npm start        (Windows CMD)`);
+      console.error(`      $env:PORT=3001; npm start         (Windows PowerShell)`);
+      console.error(`      PORT=3001 npm start               (Linux / macOS)`);
+      console.error('');
+      process.exit(1);
+      return;
+    }
+    if (err.code === 'EACCES') {
+      console.error('');
+      console.error(`  启动失败：没有权限监听端口 ${PORT}（EACCES）。`);
+      console.error('  Linux 上低于 1024 的端口通常需要 root 权限，或改用 1024 以上的端口。');
+      console.error('');
+      process.exit(1);
+      return;
+    }
+    console.error('\n  启动失败：', err);
+    process.exit(1);
+  });
+
   const shutdown = (sig) => {
     console.log(`\n收到 ${sig}，正在关闭…`);
     server.close(() => process.exit(0));

@@ -179,6 +179,30 @@
   );
 }
 
+/* 首屏氛围光：两团缓慢呼吸的品牌色光晕，让深底更有层次 */
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(42% 52% at 78% 30%, rgba(242, 182, 3, 0.16), transparent 70%),
+    radial-gradient(36% 44% at 12% 82%, rgba(195, 76, 24, 0.28), transparent 72%);
+  animation: heroGlow 9s var(--ease-in-out) infinite alternate;
+}
+
+@keyframes heroGlow {
+  from {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
 /* 悬浮的柑橘切面装饰 */
 .hero__wheel {
   position: absolute;
@@ -249,6 +273,8 @@
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  /* 柔和的暖色投影，让渐变标题从深底上"浮"出来 */
+  filter: drop-shadow(0 6px 26px rgba(242, 182, 3, 0.22));
 }
 
 .hero h1 .thin {
@@ -282,17 +308,40 @@
 }
 
 .metric {
+  position: relative;
   padding: 18px 20px;
   border-radius: var(--r-lg);
   background: rgba(255, 255, 255, 0.07);
   border: 1px solid rgba(255, 255, 255, 0.14);
   backdrop-filter: blur(14px);
-  transition: transform var(--dur) var(--ease), background var(--dur) var(--ease);
+  overflow: hidden;
+  transition: transform var(--dur) var(--ease), background var(--dur) var(--ease),
+    border-color var(--dur) var(--ease);
+}
+
+/* 左缘品牌色光线：悬停时点亮 */
+.metric::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 14px;
+  bottom: 14px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--grad-accent);
+  opacity: 0.35;
+  transition: opacity var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
 }
 
 .metric:hover {
   transform: translateX(-6px);
   background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(242, 182, 3, 0.38);
+}
+
+.metric:hover::before {
+  opacity: 1;
+  box-shadow: 0 0 14px rgba(242, 182, 3, 0.55);
 }
 
 .metric__num {
@@ -387,6 +436,26 @@
   backdrop-filter: blur(10px);
   transition: transform var(--dur) var(--ease), border-color var(--dur) var(--ease),
     box-shadow var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+
+/* 卡顶品牌色描线：默认淡入淡出，悬停时点亮 */
+.proj::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 24px;
+  right: 24px;
+  height: 2px;
+  border-radius: 0 0 4px 4px;
+  background: var(--grad-accent);
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+  z-index: 3;
+}
+
+.proj:hover::before {
+  opacity: 1;
+  box-shadow: 0 2px 16px rgba(242, 182, 3, 0.45);
 }
 
 .proj:hover {
@@ -616,13 +685,14 @@
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.11);
   transition: transform var(--dur) var(--ease), border-color var(--dur) var(--ease),
-    background var(--dur) var(--ease);
+    background var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
 }
 
 .news:hover {
   transform: translateX(6px);
   border-color: rgba(242, 182, 3, 0.42);
   background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 18px 42px -20px rgba(0, 0, 0, 0.65);
 }
 
 .news__date {

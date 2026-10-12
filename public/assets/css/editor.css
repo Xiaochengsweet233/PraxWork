@@ -512,3 +512,95 @@
     flex-wrap: wrap;
   }
 }
+
+/* ---------------------------------------------------------------- 富文本编辑器 */
+.ed-richtext {
+  min-height: 420px;
+  padding: 20px 22px;
+  font-size: 16px;
+  line-height: 1.85;
+  color: var(--text);
+  background: #fff;
+  outline: none;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+
+.ed-richtext:focus {
+  border-color: var(--prax-orange);
+  box-shadow: 0 0 0 3.5px rgba(195, 76, 24, 0.12);
+}
+
+.ed-richtext[hidden] {
+  display: none !important;
+}
+
+/* 富文本内容的排版（与前台正文一致） */
+.ed-richtext h1,
+.ed-richtext h2,
+.ed-richtext h3,
+.ed-richtext h4 {
+  margin: 1.2em 0 0.5em;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+.ed-richtext h1 { font-size: 1.8em; }
+.ed-richtext h2 { font-size: 1.45em; }
+.ed-richtext h3 { font-size: 1.2em; }
+
+.ed-richtext p {
+  margin: 0.6em 0;
+}
+
+.ed-richtext ul,
+.ed-richtext ol {
+  margin: 0.6em 0;
+  padding-left: 1.6em;
+  list-style: revert;
+}
+
+.ed-richtext li {
+  margin: 0.3em 0;
+}
+
+.ed-richtext blockquote {
+  margin: 1em 0;
+  padding: 0.7em 1.1em;
+  border-left: 3px solid var(--prax-orange);
+  background: var(--prax-orange-50);
+  color: var(--text-soft);
+  border-radius: 0 var(--r-md) var(--r-md) 0;
+}
+
+.ed-richtext pre {
+  margin: 1em 0;
+  padding: 14px 16px;
+  background: #241a14;
+  color: #f4ece5;
+  border-radius: var(--r-md);
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
+
+.ed-richtext a {
+  color: var(--prax-orange-600);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.ed-richtext hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 1.4em 0;
+}
+
+/* 空富文本占位提示 */
+.ed-richtext:empty::before {
+  content: '在这里写内容… 选中文字点上方工具栏即可改格式';
+  color: var(--text-mute);
+  pointer-events: none;
+}

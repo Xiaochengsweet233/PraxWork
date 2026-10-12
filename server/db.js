@@ -309,6 +309,31 @@ CREATE TABLE IF NOT EXISTS messages (
   ip         TEXT    NOT NULL DEFAULT '',
   created_at TEXT    NOT NULL DEFAULT (datetime('now','localtime'))
 );
+
+/* 表单系统：可自定义字段（填空/单选/多选/下拉等）的表单 + 提交收集 */
+CREATE TABLE IF NOT EXISTS forms (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  title       TEXT    NOT NULL,
+  slug        TEXT    NOT NULL UNIQUE,
+  description TEXT    NOT NULL DEFAULT '',
+  fields      TEXT    NOT NULL DEFAULT '[]',   -- JSON 数组：字段定义
+  success_msg TEXT    NOT NULL DEFAULT '提交成功，感谢你的参与！',
+  allow_multiple INTEGER NOT NULL DEFAULT 1,  -- 是否允许重复提交
+  enabled     INTEGER NOT NULL DEFAULT 1,     -- 是否启用（关闭后前台不可提交）
+  sort_order  INTEGER NOT NULL DEFAULT 0,
+  created_at  TEXT    NOT NULL DEFAULT (datetime('now','localtime')),
+  updated_at  TEXT    NOT NULL DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_forms_enabled ON forms(enabled, sort_order);
+
+CREATE TABLE IF NOT EXISTS form_submissions (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  form_id     INTEGER NOT NULL REFERENCES forms(id) ON DELETE CASCADE,
+  data        TEXT    NOT NULL DEFAULT '{}',   -- JSON 对象：字段名 -> 值
+  ip          TEXT    NOT NULL DEFAULT '',
+  created_at  TEXT    NOT NULL DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_fsub_form ON form_submissions(form_id, id DESC);
 `;
 
 db.exec(SCHEMA);

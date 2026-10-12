@@ -40,6 +40,8 @@
       'Markdown：正文里的 HTML 标签会被原样显示成文字（不会执行），这是安全设计。需要真正的 HTML 排版请切到 HTML 格式。',
     html:
       'HTML：可自由排版、写内联样式。出于安全，script / iframe / on* 事件等会被自动清除，保存时即生效。',
+    rich:
+      '富文本：像论坛一样，选中文字直接点工具栏改格式（加粗、标题、列表、引用等），所见即所得。保存后与 HTML 格式等价。',
   };
 
   function applyFormatHint() {
@@ -48,14 +50,38 @@
     // 切换格式时重绘工具栏（Markdown 与 HTML 的可插入语法不同）
     var bar = $('#edToolbar');
     if (!bar) return;
+    var isRich = state.format === 'rich';
     var tools = bar.querySelectorAll('.ed-tool[data-tool]');
     Array.prototype.forEach.call(tools, function (b) {
       var md = b.getAttribute('data-md');
       var html = b.getAttribute('data-html');
+      if (isRich) {
+        // 富文本模式只显示带 data-rich 的按钮，走 execCommand
+        b.hidden = !b.hasAttribute('data-rich');
+        return;
+      }
       var keep = state.format === 'html' ? html && html !== 'null' : md && md !== 'null';
-      // 「表格/分隔线/列表」两种格式都有；这里只隐藏某格式不支持的那个
       b.hidden = !keep;
     });
+    // 富文本 / textarea 切换
+    var ta = $('#edInput');
+    var rich = $('#edRich');
+    if (ta && rich) {
+      if (isRich) {
+        ta.hidden = true;
+        rich.hidden = false;
+        if (!rich.dataset.inited) {
+          rich.innerHTML = ta.value || '';
+          rich.dataset.inited = '1';
+        }
+        rich.focus();
+      } else {
+        ta.hidden = false;
+        rich.hidden = true;
+        // 离开富文本时把内容回写到 textarea，供后续 Markdown/HTML 编辑
+        if (rich.dataset.inited) ta.value = rich.innerHTML;
+      }
+    }
   }
 
   /* -------------------------------------------------- 字数统计 */
@@ -238,6 +264,42 @@
     if (!btn) return;
     e.preventDefault();
     var key = btn.getAttribute('data-tool');
+
+    // 富文本模式：走 execCommand，选中文字即改格式
+    if (state.format === 'rich') {
+      var rich = $('#edRich');
+      if (!rich) return;
+      rich.focus();
+      var cmdMap = {
+        bold: 'bold',
+        italic: 'italic',
+        strike: 'strikeThrough',
+        code: 'formatBlock',
+        h1: 'formatBlock',
+        h2: 'formatBlock',
+        h3: 'formatBlock',
+        quote: 'formatBlock',
+        ul: 'insertUnorderedList',
+        ol: 'insertOrderedList',
+        link: 'createLink',
+        hr: 'insertHorizontalRule',
+      };
+      var cmd = cmdMap[key];
+      if (!cmd) return;
+      if (key === 'h1') { D.execCommand(cmd, false, 'H1'); }
+      else if (key === 'h2') { D.execCommand(cmd, false, 'H2'); }
+      else if (key === 'h3') { D.execCommand(cmd, false, 'H3'); }
+      else if (key === 'quote') { D.execCommand(cmd, false, 'BLOCKQUOTE'); }
+      else if (key === 'code') { D.execCommand('formatBlock', false, 'PRE'); }
+      else if (key === 'link') {
+        var url = W.prompt('请输入链接地址（可填站内路径 /p/xxx 或外站 https://）', 'https://');
+        if (url) D.execCommand(cmd, false, url);
+      } else if (key === 'hr') { D.execCommand(cmd, false); }
+      else { D.execCommand(cmd, false, null); }
+      richFromInput();
+      return;
+    }
+
     var raw =
       state.format === 'html' ? btn.getAttribute('data-html') : btn.getAttribute('data-md');
     var spec;
@@ -266,6 +328,29 @@
     }
     if (Array.isArray(spec)) return wrapSelection(spec[0], spec[1]);
   });
+
+  /* -------------------------------------------------- 富文本编辑器同步 */
+  function richFromInput() {
+    var rich = $('#edRich');
+    if (!rich) return;
+    input.value = rich.innerHTML;
+    markDirty();
+    updateStatus();
+    schedulePreview();
+  }
+
+  var richEl = $('#edRich');
+  if (richEl) {
+    richEl.addEventListener('input', function () {
+      if (state.format === 'rich') richFromInput();
+    });
+    // 粘贴时清掉 MS Word 之类带来的脏 HTML（保留纯文本 + 基本换行）
+    richEl.addEventListener('paste', function (e) {
+      e.preventDefault();
+      var text = (e.clipboardData || W.clipboardData).getData('text/plain');
+      D.execCommand('insertText', false, text);
+    });
+  }
 
   /* -------------------------------------------------- 格式切换 */
   var seg = $('#fmtSeg');
@@ -517,7 +602,8 @@
     });
 
     payload.body = input.value;
-    payload.format = state.format;
+    // 富文本模式底层就是 HTML，保存时归一化为 html，避免库里出现 'rich' 格式
+    payload.format = state.format === 'rich' ? 'html' : state.format;
     return payload;
   }
 

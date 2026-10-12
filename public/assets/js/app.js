@@ -582,6 +582,24 @@
     }, 4200);
   }
 
+  /* ------------------------------------------------------------ 返回顶部 */
+  function backToTop() {
+    var btn = D.createElement('button');
+    btn.className = 'to-top';
+    btn.type = 'button';
+    btn.setAttribute('aria-label', '返回顶部');
+    btn.innerHTML = '<svg class="ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>';
+    D.body.appendChild(btn);
+    var onScroll = function () {
+      btn.classList.toggle('is-show', W.scrollY > 420);
+    };
+    onScroll();
+    W.addEventListener('scroll', onScroll, { passive: true });
+    btn.addEventListener('click', function () {
+      W.scrollTo({ top: 0, behavior: reduced() ? 'auto' : 'smooth' });
+    });
+  }
+
   /* ------------------------------------------------------------ 启动 */
   function boot() {
     applyTheme();
@@ -599,6 +617,7 @@
     adminNav();
     logoutBtn();
     autoDismissFlash();
+    backToTop();
     revealInit();
   }
 

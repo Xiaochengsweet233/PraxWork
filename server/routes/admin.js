@@ -92,6 +92,7 @@ function navCounts() {
     friends: countOf('friends'),
     nav_items: countOf('nav_items'),
     pages: countOf('pages'),
+    forms: countOf('forms'),
     media: countOf('media'),
     users: countOf('users'),
     tasks_open: countOf('tasks', "status != 'done' AND status != 'archived'"),
@@ -1531,6 +1532,7 @@ router.patch('/api/tasks/:id/progress', auth.requireAuth, auth.requirePerm('oa')
 
 const PE = require('../page-editor');
 const contentMod = require('../content');
+const FM = require('../forms');
 
 function mountPageRoutes() {
 
@@ -1849,11 +1851,163 @@ router.post('/api/pages/:id/revisions/:revId/restore', auth.requireAuth, auth.re
 
 } // end mountPageRoutes()
 
+/* ================================================================ 表单系统
+ *
+ * 后台：/admin/forms（列表）· /admin/forms/new · /admin/forms/:id（编辑）
+ *       /admin/forms/:id/submissions（提交记录）
+ * 固定 API 必须先于 mountResourceApi() 注册，否则 /api/forms 会被 /api/:resource 吃掉。
+ */
+
+function mountFormRoutes() {
+
+function fetchForm(id) {
+  const f = get('SELECT * FROM forms WHERE id = ?', id);
+  if (!f) return null;
+  return Object.assign({}, f, {
+    fields: parseJSON(f.fields, []),
+    allow_multiple: toBool(f.allow_multiple) ? 1 : 0,
+    enabled: toBool(f.enabled) ? 1 : 0,
+  });
+}
+
+/** slug 唯一化 */
+function formSlug(base, excludeId) {
+  return uniqueSlug('forms', base, excludeId);
+}
+
+/** 列表 */
+router.get('/admin/forms', auth.requireAuth, auth.requirePerm('content'), (req, res) => {
+  const list = all('SELECT * FROM forms ORDER BY sort_order, id DESC');
+  const body = `
+<div class="page-head">
+  <div class="muted" style="font-size:13px">共 ${list.length} 个表单，前台访问路径形如 <span class="mono">/form/路径</span></div>
+  <div class="page-head__act">
+    <a class="btn btn-primary btn-sm" href="/admin/forms/new">${R.icon('plus', 15)}新建表单</a>
+  </div>
+</div>
+${FM.formList(list)}`;
+  sendPage(req, res, { pageTitle: '表单', pageSub: `内容管理 · 共 ${list.length} 个表单`, body, scripts: ['/assets/js/form-editor.js'] });
+});
+
+/** 新建 */
+router.get('/admin/forms/new', auth.requireAuth, auth.requirePerm('content'), (req, res) => {
+  sendPage(req, res, {
+    pageTitle: '新建表单',
+    pageSub: '自定义填空、单选、多选、下拉等字段',
+    body: FM.formEditor(null),
+    scripts: ['/assets/js/form-editor.js'],
+  });
+});
+
+/** 编辑 */
+router.get('/admin/forms/:id', auth.requireAuth, auth.requirePerm('content'), (req, res, next) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return next();
+  const form = fetchForm(id);
+  if (!form) return next();
+  sendPage(req, res, {
+    pageTitle: '编辑表单',
+    pageSub: form.title,
+    body: FM.formEditor(form),
+    scripts: ['/assets/js/form-editor.js'],
+  });
+});
+
+/** 提交记录 */
+router.get('/admin/forms/:id/submissions', auth.requireAuth, auth.requirePerm('content'), (req, res, next) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return next();
+  const form = fetchForm(id);
+  if (!form) return next();
+  const subs = all('SELECT * FROM form_submissions WHERE form_id = ? ORDER BY id DESC LIMIT 500', id);
+  const body = `
+<div class="page-head">
+  <div class="muted" style="font-size:13px">「${R.esc(form.title)}」共 ${subs.length} 条提交（最多显示最近 500 条）</div>
+  <div class="page-head__act">
+    <a class="btn btn-ghost btn-sm" href="/admin/forms/${id}">${R.icon('pencil', 14)}编辑表单</a>
+    <a class="btn btn-ghost btn-sm" href="/form/${R.escAttr(form.slug)}" target="_blank" rel="noopener">${R.icon('external', 14)}查看前台</a>
+  </div>
+</div>
+${FM.submissionList(form, subs)}`;
+  sendPage(req, res, { pageTitle: '表单提交', pageSub: form.title, body });
+});
+
+/** 创建 API */
+router.post('/api/forms', auth.requireAuth, auth.requirePerm('content'), express.json({ limit: '512kb' }), (req, res) => {
+  const b = req.body || {};
+  const title = String(b.title || '').trim();
+  if (!title) return res.status(400).json({ ok: false, error: '请填写表单标题' });
+  const fields = FM.normalizeFields(b.fields);
+  const slug = formSlug(String(b.slug || '').trim() || title, null);
+  const info = run(
+    `INSERT INTO forms (title, slug, description, fields, success_msg, allow_multiple, enabled)
+     VALUES (?,?,?,?,?,?,?)`,
+    title,
+    slug,
+    String(b.description || '').slice(0, 2000),
+    JSON.stringify(fields),
+    String(b.success_msg || '提交成功，感谢你的参与！').slice(0, 200),
+    b.allow_multiple === '1' || b.allow_multiple === 1 || b.allow_multiple === true ? 1 : 0,
+    b.enabled === '0' || b.enabled === 0 || b.enabled === false ? 0 : 1
+  );
+  auth.logAudit(req, 'create', 'forms', info.lastInsertRowid, `新建表单：${title}（/form/${slug}）`);
+  res.json({ ok: true, message: '表单已创建', id: Number(info.lastInsertRowid), slug, url: '/form/' + slug });
+});
+
+/** 更新 API */
+router.patch('/api/forms/:id', auth.requireAuth, auth.requirePerm('content'), express.json({ limit: '512kb' }), (req, res) => {
+  const id = Number(req.params.id);
+  const existing = fetchForm(id);
+  if (!existing) return res.status(404).json({ ok: false, error: '表单不存在' });
+  const b = req.body || {};
+  const title = String(b.title || existing.title).trim();
+  if (!title) return res.status(400).json({ ok: false, error: '请填写表单标题' });
+  const fields = FM.normalizeFields(b.fields !== undefined ? b.fields : existing.fields);
+  const slug = b.slug !== undefined ? formSlug(String(b.slug).trim() || title, id) : existing.slug;
+  run(
+    `UPDATE forms SET title=?, slug=?, description=?, fields=?, success_msg=?, allow_multiple=?, enabled=?,
+       updated_at = datetime('now','localtime') WHERE id=?`,
+    title,
+    slug,
+    String(b.description !== undefined ? b.description : existing.description).slice(0, 2000),
+    JSON.stringify(fields),
+    String(b.success_msg !== undefined ? b.success_msg : existing.success_msg).slice(0, 200),
+    b.allow_multiple !== undefined ? (b.allow_multiple === '1' || b.allow_multiple === 1 || b.allow_multiple === true ? 1 : 0) : existing.allow_multiple,
+    b.enabled !== undefined ? (b.enabled === '1' || b.enabled === 1 || b.enabled === true ? 1 : 0) : existing.enabled,
+    id
+  );
+  auth.logAudit(req, 'update', 'forms', id, `更新表单：${title}（/form/${slug}）`);
+  res.json({ ok: true, message: '已保存', slug, url: '/form/' + slug });
+});
+
+/** 删除 API（级联删除提交记录，靠外键 ON DELETE CASCADE） */
+router.delete('/api/forms/:id', auth.requireAuth, auth.requirePerm('content'), (req, res) => {
+  const id = Number(req.params.id);
+  const existing = fetchForm(id);
+  if (!existing) return res.status(404).json({ ok: false, error: '表单不存在' });
+  run('DELETE FROM forms WHERE id = ?', id);
+  auth.logAudit(req, 'delete', 'forms', id, `删除表单：${existing.title}`);
+  res.json({ ok: true, message: '已删除' });
+});
+
+/** 删除单条提交 */
+router.delete('/api/form-submissions/:id', auth.requireAuth, auth.requirePerm('content'), (req, res) => {
+  const id = Number(req.params.id);
+  const s = get('SELECT * FROM form_submissions WHERE id = ?', id);
+  if (!s) return res.status(404).json({ ok: false, error: '提交记录不存在' });
+  run('DELETE FROM form_submissions WHERE id = ?', id);
+  auth.logAudit(req, 'delete', 'form_submissions', id, '删除表单提交记录');
+  res.json({ ok: true, message: '已删除' });
+});
+
+} // end mountFormRoutes()
+
 /* ================================================================ 兜底 404 */
 
 // 顺序要求：页面专用路由 -> 固定 API -> 通用资源。
 // 每一步都不能颠倒，否则参数路由会抢先吃掉具体路径。
 mountPageRoutes();
+mountFormRoutes();
 mountResourceApi();
 mountResourceRoutes();
 

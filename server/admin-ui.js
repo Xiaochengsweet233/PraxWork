@@ -368,6 +368,7 @@ function adminNavGroups(ctx) {
         { href: '/admin/projects', label: '项目', icon: 'box', count: counts.projects },
         { href: '/admin/showcases', label: '工坊内容', icon: 'palette', count: counts.showcases },
         { href: '/admin/pages', label: '自建页面', icon: 'file', count: counts.pages },
+        { href: '/admin/forms', label: '表单', icon: 'clipboard', count: counts.forms },
         { href: '/admin/announcements', label: '公告', icon: 'megaphone', count: counts.announcements },
         { href: '/admin/friends', label: '友情链接', icon: 'link', count: counts.friends },
         { href: '/admin/nav_items', label: '导航菜单', icon: 'list', count: counts.nav_items },

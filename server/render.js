@@ -258,6 +258,10 @@ function siteHeader({ settings, user, navItems = [], active = '' }) {
     </a>
     <nav class="nav" id="siteNav" aria-label="主导航">${links}</nav>
     <div class="site-header__act">
+      <a class="btn btn-ghost btn-sm header-search" href="/search" aria-label="站内搜索">${icon(
+        'search',
+        16
+      )}</a>
       ${userArea}
       <button class="nav-toggle" id="navToggle" aria-label="打开导航" aria-expanded="false">${icon(
         'menu',

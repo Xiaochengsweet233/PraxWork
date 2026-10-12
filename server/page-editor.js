@@ -39,12 +39,15 @@ function toolbarHtml(format) {
   return TOOLBAR.map((btn) => {
     const has = format === 'html' ? btn.html || btn.md : btn.md;
     if (!has) return '';
+    // 富文本模式支持的命令集（bold/italic/strike/h1/h2/h3/quote/ul/ol/link/hr）
+    const RICH_CMDS = new Set(['bold', 'italic', 'strike', 'h1', 'h2', 'h3', 'quote', 'ul', 'ol', 'link', 'hr']);
+    const richAttr = RICH_CMDS.has(btn.key) ? ' data-rich="1"' : '';
     return (
       `<button class="ed-tool" type="button" ` +
       `data-tool="${R.escAttr(btn.key)}" title="${R.escAttr(btn.title)}" ` +
       `data-md='${R.escAttr(JSON.stringify(btn.md || null))}' ` +
       `data-html='${R.escAttr(JSON.stringify(btn.html || null))}' ` +
-      `data-wrap="${R.escAttr(btn.wrap || '')}">${R.esc(btn.label)}</button>`
+      `data-wrap="${R.escAttr(btn.wrap || '')}"${richAttr}>${R.esc(btn.label)}</button>`
     );
   }).join('');
 }
@@ -107,6 +110,9 @@ function pageEditor(row) {
               </button>
               <button class="seg__btn${fmt === 'html' ? ' is-on' : ''}" type="button" data-fmt="html">
                 HTML
+              </button>
+              <button class="seg__btn${fmt === 'rich' ? ' is-on' : ''}" type="button" data-fmt="rich">
+                富文本
               </button>
             </div>
             <input type="hidden" name="format" id="p_format" value="${R.escAttr(fmt)}">
@@ -238,6 +244,8 @@ Markdown 常用写法：
 | 表头 | 表头 |
 | --- | --- |
 | 内容 | 内容 |"></textarea>
+            <!-- 富文本编辑器（contenteditable）：选中文字点工具栏即改格式 -->
+            <div class="ed-richtext" id="edRich" contenteditable="true" spellcheck="false" hidden></div>
             <div class="ed-status">
               <span id="edCount">0 字</span>
               <span class="ed-status__dot"></span>

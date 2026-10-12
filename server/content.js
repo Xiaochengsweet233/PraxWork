@@ -164,10 +164,12 @@ function sanitizeStyles(html) {
   });
 }
 
-const FORMATS = new Set(['markdown', 'html']);
+const FORMATS = new Set(['markdown', 'html', 'rich']);
 
 function normalizeFormat(f) {
   const v = String(f || '').toLowerCase();
+  // rich（富文本）与 html 同源：都产出并渲染 HTML，rich 仅编辑器 UI 上多一层所见即所得
+  if (v === 'rich') return 'html';
   return FORMATS.has(v) ? v : 'markdown';
 }
 

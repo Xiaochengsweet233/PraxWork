@@ -4,8 +4,12 @@ services:
     image: prax-portal:latest
     container_name: prax-portal
     restart: unless-stopped
-    ports:
-      - "3000:3000"
+    # 不再直接把 3000 暴露到宿主机：改由 nginx 反代接管 80/443。
+    # 若你想在服务器本机用 http://localhost:3000 调试，把下面两行注释打开即可。
+    # ports:
+    #   - "3000:3000"
+    expose:
+      - "3000"
     environment:
       NODE_ENV: production
       PORT: "3000"
@@ -28,6 +32,29 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
+    networks:
+      - prax-net
+
+  # NGINX 反向代理：把域名 80/443 转发到 prax:3000
+  nginx:
+    image: nginx:alpine
+    container_name: prax-nginx
+    restart: unless-stopped
+    depends_on:
+      - prax
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx/prax.conf:/etc/nginx/conf.d/prax.conf:ro
+      # HTTPS 证书挂载点（自备证书时取消注释）
+      # - ./deploy/nginx/certs:/etc/nginx/certs:ro
+    networks:
+      - prax-net
 
 volumes:
   prax-data:
+
+networks:
+  prax-net:
+    driver: bridge

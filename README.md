@@ -166,11 +166,13 @@ public/assets/pattern/  SVG 纹样（柑橘切面、点阵、波浪分隔）
 ### 方式一：Docker 部署（推荐 · 主部署方式）
 
 ```bash
+# 1. 把 deploy/nginx/prax.conf 里的 prax.yourdomain.com 换成你的域名
+# 2. 启动（会拉起 prax 应用 + nginx 反代两个容器）
 docker compose up -d --build
 ```
 
 - 数据（SQLite + 上传文件）持久化在 `prax-data` 卷中，重建/更新容器**不丢数据**
-- 默认端口 `3000`
+- **域名访问**：nginx 反代容器接管 `80/443`，转发到应用容器的 `3000`；详见 **[deploy/README.md](deploy/README.md)**
 - 首次启动可用 `PRAX_ADMIN_PASSWORD` 指定初始管理员口令（默认 `admin123`，登录后请立即修改）
 - 内置 healthcheck
 - 可用 `PRAX_DATA_DIR` / `PRAX_DB_FILE` / `PRAX_UPLOAD_DIR` 把数据与代码分离

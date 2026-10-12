@@ -1,12 +1,13 @@
-﻿'use strict';
+'use strict';
 /**
  * 前台路由：门户首页 / 工坊子页面 / 项目详情 / 公告详情
  */
 
 const express = require('express');
-const { all, get, getSettings, parseJSON, toBool } = require('../db');
+const { all, get, run, getSettings, parseJSON, toBool } = require('../db');
 const R = require('../render');
 const { clientIp } = require('../auth');
+const FM = require('../forms');
 
 const router = express.Router();
 
@@ -902,6 +903,194 @@ ${R.siteFooter({ settings: s, navItems: nav, friends, subpage: s.subpage_name })
       body,
     })
   );
+});
+
+/* ---------------------------------------------------------------- 表单 */
+
+// 前台公开表单页
+router.get('/form/:slug', (req, res, next) => {
+  const f = get('SELECT * FROM forms WHERE slug = ? AND enabled = 1', req.params.slug);
+  if (!f) return next();
+  const s = getSettings();
+  const nav = loadNav();
+  const friends = loadFriends();
+  const form = Object.assign({}, f, { fields: parseJSON(f.fields, []) });
+
+  const body = `
+${R.siteHeader({ settings: s, user: req.user, navItems: nav, active: '/form/' + form.slug })}
+<main id="main" class="section" style="padding-top:calc(var(--header-h) + 48px)">
+  <div class="wrap-narrow">
+    <div class="form-page">
+      <div class="form-page__head">
+        <span class="eyebrow">Form</span>
+        <h1>${R.esc(form.title)}</h1>
+      </div>
+      ${FM.renderPublicForm(form)}
+    </div>
+  </div>
+</main>
+${R.siteFooter({ settings: s, navItems: nav, friends, subpage: s.subpage_name })}
+`;
+
+  res.send(
+    R.layout({
+      page: 'form',
+      bodyClass: 'page-atelier',
+      title: form.title,
+      description: form.description || form.title,
+      styles: ['/assets/css/atelier.css', '/assets/css/forms.css'],
+      settings: s,
+      user: req.user,
+      body,
+    })
+  );
+});
+
+// 前台提交表单
+router.post('/api/forms/:slug/submit', express.json({ limit: '512kb' }), (req, res) => {
+  const f = get('SELECT * FROM forms WHERE slug = ? AND enabled = 1', req.params.slug);
+  if (!f) return res.status(404).json({ ok: false, error: '表单不存在或已停用' });
+
+  const fields = FM.normalizeFields(parseJSON(f.fields, []));
+  const result = FM.validateSubmission(fields, req.body || {});
+  if (!result.ok) {
+    return res.status(400).json({ ok: false, error: result.error });
+  }
+
+  // 不允许重复提交时，同 IP 仅限一次
+  if (!toBool(f.allow_multiple)) {
+    const dup = get('SELECT id FROM form_submissions WHERE form_id = ? AND ip = ?', f.id, clientIp(req));
+    if (dup) {
+      return res.status(409).json({ ok: false, error: '你已经提交过这个表单，感谢参与！' });
+    }
+  }
+
+  run(
+    'INSERT INTO form_submissions (form_id, data, ip) VALUES (?,?,?)',
+    f.id,
+    JSON.stringify(result.data),
+    clientIp(req)
+  );
+  res.json({ ok: true, message: f.success_msg || '提交成功，感谢你的参与！' });
+});
+
+/* ---------------------------------------------------------------- 站内搜索 */
+
+router.get('/search', (req, res) => {
+  const s = getSettings();
+  const nav = loadNav();
+  const friends = loadFriends();
+  const q = String(req.query.q || '').trim().slice(0, 80);
+
+  let results = [];
+  if (q) {
+    const like = '%' + q + '%';
+    const projects = all(
+      'SELECT id, title, slug, summary, category FROM projects WHERE visible = 1 AND (title LIKE ? OR summary LIKE ? OR tags LIKE ?) ORDER BY sort_order, id LIMIT 20',
+      like, like, like
+    );
+    const showcases = all(
+      'SELECT id, title, slug, summary, category FROM showcases WHERE visible = 1 AND (title LIKE ? OR summary LIKE ? OR tags LIKE ?) ORDER BY sort_order, id LIMIT 20',
+      like, like, like
+    );
+    const announcements = all(
+      'SELECT id, title, summary, tag FROM announcements WHERE visible = 1 AND (title LIKE ? OR summary LIKE ?) ORDER BY pinned DESC, id DESC LIMIT 10',
+      like, like
+    );
+    const pages = all(
+      'SELECT id, title, slug, summary FROM pages WHERE visible = 1 AND (title LIKE ? OR summary LIKE ? OR body LIKE ?) ORDER BY sort_order, id LIMIT 20',
+      like, like, like
+    );
+
+    results = [
+      ...projects.map((p) => ({ type: '项目', title: p.title, href: '/p/' + p.slug, desc: p.summary })),
+      ...showcases.map((x) => ({ type: '工坊', title: x.title, href: '/atelier', desc: x.summary })),
+      ...announcements.map((a) => ({ type: '公告', title: a.title, href: '/n/' + a.id, desc: a.summary })),
+      ...pages.map((p) => ({ type: '页面', title: p.title, href: '/p/' + p.slug, desc: p.summary })),
+    ];
+  }
+
+  const resultHtml = results.length
+    ? `<div class="search-results">${results
+        .map(
+          (r) => `<a class="search-item" href="${R.escAttr(r.href)}">
+      <span class="badge badge-brand">${R.esc(r.type)}</span>
+      <span class="search-item__title">${R.esc(r.title)}</span>
+      <span class="search-item__desc">${R.esc(R.truncate(r.desc, 90))}</span>
+    </a>`
+        )
+        .join('')}</div>`
+    : q
+    ? `<div class="empty">${R.icon('search', 34)}<p>没有找到与「${R.esc(q)}」相关的内容。</p></div>`
+    : `<div class="empty">${R.icon('search', 34)}<p>输入关键词，搜索项目、工坊、公告与自建页面。</p></div>`;
+
+  const body = `
+${R.siteHeader({ settings: s, user: req.user, navItems: nav, active: '/search' })}
+<main id="main" class="section" style="padding-top:calc(var(--header-h) + 48px)">
+  <div class="wrap-narrow">
+    <div class="search-page">
+      <div class="search-page__head">
+        <span class="eyebrow">Search</span>
+        <h1>站内搜索</h1>
+      </div>
+      <form class="search-form" action="/search" method="get">
+        <div class="search-box" style="min-width:100%">
+          ${R.icon('search', 18)}
+          <input class="input" type="search" name="q" value="${R.escAttr(q)}" placeholder="搜索项目、工坊、公告、页面…" autofocus>
+        </div>
+        <button class="btn btn-primary" type="submit">${R.icon('search', 17)}搜索</button>
+      </form>
+      ${resultHtml}
+    </div>
+  </div>
+</main>
+${R.siteFooter({ settings: s, navItems: nav, friends, subpage: s.subpage_name })}
+`;
+
+  res.send(
+    R.layout({
+      page: 'search',
+      bodyClass: 'page-atelier',
+      title: '搜索' + (q ? ' · ' + q : ''),
+      description: '站内搜索',
+      styles: ['/assets/css/atelier.css', '/assets/css/forms.css'],
+      settings: s,
+      user: req.user,
+      body,
+    })
+  );
+});
+
+/* ---------------------------------------------------------------- sitemap / robots（SEO） */
+
+router.get('/sitemap.xml', (req, res) => {
+  const base = (req.protocol || 'http') + '://' + (req.headers.host || 'localhost');
+  const projects = all('SELECT slug, updated_at FROM projects WHERE visible = 1');
+  const showcases = all('SELECT slug, updated_at FROM showcases WHERE visible = 1');
+  const announcements = all('SELECT id, published_at FROM announcements WHERE visible = 1');
+  const pages = all('SELECT slug, updated_at FROM pages WHERE visible = 1');
+
+  const url = (path, lastmod) =>
+    `<url><loc>${base}${path}</loc>${lastmod ? `<lastmod>${String(lastmod).slice(0, 10)}</lastmod>` : ''}</url>`;
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>${base}/</loc></url>
+  <url><loc>${base}/atelier</loc></url>
+  <url><loc>${base}/search</loc></url>
+  ${projects.map((p) => url('/p/' + p.slug, p.updated_at)).join('\n  ')}
+  ${announcements.map((a) => url('/n/' + a.id, a.published_at)).join('\n  ')}
+  ${pages.map((p) => url('/p/' + p.slug, p.updated_at)).join('\n  ')}
+</urlset>`;
+
+  res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+  res.send(xml);
+});
+
+router.get('/robots.txt', (req, res) => {
+  const base = (req.protocol || 'http') + '://' + (req.headers.host || 'localhost');
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.send(`User-agent: *\nAllow: /\nSitemap: ${base}/sitemap.xml\n`);
 });
 
 /* ---------------------------------------------------------------- 联系表单 */
